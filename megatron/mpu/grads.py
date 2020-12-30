@@ -95,7 +95,7 @@ def clip_grad_norm(parameters, max_norm, norm_type=2):
     norm_type = float(norm_type)
     if norm_type == inf:
         total_norm = max(p.grad.data.abs().max() for p in parameters)
-        total_norm_cuda = torch.cuda.FloatTensor([float(total_norm)])
+        total_norm_cuda = torch.FloatTensor([float(total_norm)])
         # Take max across all GPUs.
         torch.distributed.all_reduce(total_norm_cuda,
                                      op=torch.distributed.ReduceOp.MAX,
@@ -115,7 +115,7 @@ def clip_grad_norm(parameters, max_norm, norm_type=2):
                 param_norm = p.grad.data.norm(norm_type)
                 total_norm += param_norm.item() ** norm_type
         # Sum across all model parallel GPUs.
-        total_norm_cuda = torch.cuda.FloatTensor([float(total_norm)])
+        total_norm_cuda = torch.FloatTensor([float(total_norm)])
         torch.distributed.all_reduce(total_norm_cuda,
                                      op=torch.distributed.ReduceOp.SUM,
                                      group=get_model_parallel_group())

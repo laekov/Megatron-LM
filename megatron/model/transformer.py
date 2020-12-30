@@ -268,8 +268,7 @@ class ParallelSelfAttention(MegatronModule):
             output_size[0]*output_size[1], 
             output_size[2], 
             output_size[3],
-            dtype=query_layer.dtype, 
-            device=torch.cuda.current_device())
+            dtype=query_layer.dtype)
 
         # Raw attention scores. [b * np, sq, sk]
         matmul_result = torch.baddbmm(matmul_result, 
@@ -309,8 +308,8 @@ class ParallelSelfAttention(MegatronModule):
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
-        with mpu.get_cuda_rng_tracker().fork():
-            attention_probs = self.attention_dropout(attention_probs)
+        # with mpu.get_cuda_rng_tracker().fork():
+        attention_probs = self.attention_dropout(attention_probs)
 
 
         # =========================

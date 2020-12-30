@@ -163,7 +163,7 @@ class BertModel(MegatronModule):
             return lm_logits, binary_logits
         else:
             if self.fp16_lm_cross_entropy:
-                assert lm_logits.dtype == torch.half
+                assert lm_logits.dtype == torch.float
                 lm_loss = mpu.vocab_parallel_cross_entropy(lm_logits, lm_labels)
             else:
                 lm_loss = mpu.vocab_parallel_cross_entropy(lm_logits.float(),

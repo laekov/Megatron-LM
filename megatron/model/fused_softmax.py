@@ -122,6 +122,6 @@ class FusedScaleMaskSoftmax(torch.nn.Module):
             probs = torch.nn.Softmax(dim=-1)(mask_output)
 
             if self.input_in_fp16 and self.softmax_in_fp32:
-                probs = probs.half()
+                probs = probs.float()
 
         return probs

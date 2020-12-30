@@ -41,7 +41,8 @@ def initialize_megatron(extra_args_provider=None, args_defaults={},
 """
     if not allow_no_cuda:
         # Make sure cuda is available.
-        assert torch.cuda.is_available(), 'Megatron requires CUDA.'
+        # assert torch.is_available(), 'Megatron requires CUDA.'
+        print('cuda is fucked away')
 
     # Parse args, build tokenizer, and set adlr-autoresume,
     # tensorboard-writer, and timers.
@@ -89,7 +90,7 @@ def _initialize_distributed():
     """Initialize torch.distributed and mpu."""
     args = get_args()
 
-    device_count = torch.cuda.device_count()
+    device_count = 1 # torch.device_count()
     if torch.distributed.is_initialized():
 
         if args.rank == 0:
@@ -110,7 +111,7 @@ def _initialize_distributed():
                     'expected local-rank to be the same as rank % device-count.'
             else:
                 args.local_rank = device
-            torch.cuda.set_device(device)
+            # torch.set_device(device)
         # Call the init process
         init_method = 'tcp://'
         master_ip = os.getenv('MASTER_ADDR', 'localhost')
@@ -144,8 +145,6 @@ def _set_random_seed(seed):
         random.seed(seed)
         np.random.seed(seed)
         torch.manual_seed(seed)
-        if torch.cuda.device_count() > 0:
-            mpu.model_parallel_cuda_manual_seed(seed)
     else:
         raise ValueError('Seed ({}) should be a positive integer.'.format(seed))
 

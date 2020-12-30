@@ -22,13 +22,13 @@ from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 from .loss_scaler import DynamicLossScaler, LossScaler
 from .fp16util import model_grads_to_master_grads, master_params_to_model_params, clip_grad_norm
 
-from apex.multi_tensor_apply import multi_tensor_applier
-import amp_C
+# from apex.multi_tensor_apply import multi_tensor_applier
+# import amp_C
 
 from megatron.module import MegatronModule
 
-FLOAT_TYPES = (torch.FloatTensor, torch.cuda.FloatTensor)
-HALF_TYPES = (torch.HalfTensor, torch.cuda.HalfTensor)
+FLOAT_TYPES = (torch.FloatTensor, torch.FloatTensor)
+HALF_TYPES = (torch.FloatTensor, torch.FloatTensor)
 
 
 def conversion_helper(val, conversion):
@@ -43,14 +43,14 @@ def conversion_helper(val, conversion):
 
 def fp32_to_fp16(val):
     """Convert fp32 `val` to fp16"""
-    def half_conversion(val):
+    def float_conversion(val):
         val_typecheck = val
         if isinstance(val_typecheck, (Parameter, Variable)):
             val_typecheck = val.data
         if isinstance(val_typecheck, FLOAT_TYPES):
-            val = val.half()
+            val = val.float()
         return val
-    return conversion_helper(val, half_conversion)
+    return conversion_helper(val, float_conversion)
 
 
 def fp16_to_fp32(val):
@@ -68,7 +68,7 @@ def fp16_to_fp32(val):
 class FP16_Module(MegatronModule):
     def __init__(self, module):
         super(FP16_Module, self).__init__()
-        self.add_module('module', module.half())
+        self.add_module('module', module.float())
 
     def forward(self, *inputs, **kwargs):
         return fp16_to_fp32(self.module(*(fp32_to_fp16(inputs)), **kwargs))
@@ -96,7 +96,7 @@ class FP16_Optimizer(object):
 
     Example::
 
-        model = torch.nn.Linear(D_in, D_out).cuda().half()
+        model = torch.nn.Linear(D_in, D_out).float()
         optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
         # Name the FP16_Optimizer instance to replace the existing optimizer
         # (recommended but not required):
@@ -187,7 +187,7 @@ class FP16_Optimizer(object):
                  dynamic_loss_scale=False,
                  dynamic_loss_args=None,
                  verbose=False):
-        if not torch.cuda.is_available:
+        if not torch.is_available:
             raise SystemError("Cannot use fp16 without CUDA.")
 
         self.verbose = verbose
@@ -207,8 +207,8 @@ class FP16_Optimizer(object):
             fp32_from_fp16_params_this_group = []
             for i, param in enumerate(param_group['params']):
                 if param.requires_grad:
-                    if param.type() == 'torch.cuda.HalfTensor':
-                        self.maybe_print("FP16_Optimizer received torch.cuda.HalfTensor with {}"
+                    if param.type() == 'torch.HalfTensor':
+                        self.maybe_print("FP16_Optimizer received torch.HalfTensor with {}"
                                          .format(param.size()))
                         fp16_params_this_group.append(param)
                         master_param = param.detach().clone().float()
@@ -221,14 +221,14 @@ class FP16_Optimizer(object):
                         # We still need to recast per-param state tensors, if any, to FP32.
                         if param in self.optimizer.state:
                             self.optimizer.state[master_param] = self.optimizer.state.pop(param)
-                    elif param.type() == 'torch.cuda.FloatTensor':
-                        self.maybe_print("FP16_Optimizer received torch.cuda.FloatTensor with {}"
+                    elif param.type() == 'torch.FloatTensor':
+                        self.maybe_print("FP16_Optimizer received torch.FloatTensor with {}"
                                          .format(param.size()))
                         fp32_params_this_group.append(param)
                         param_group['params'][i] = param
                     else:
                         raise TypeError("Wrapped parameters must be either "
-                                        "torch.cuda.FloatTensor or torch.cuda.HalfTensor. "
+                                        "torch.FloatTensor or torch.HalfTensor. "
                                         "Received {}".format(param.type()))
 
             self.fp16_groups.append(fp16_params_this_group)
@@ -323,7 +323,7 @@ class FP16_Optimizer(object):
         if self.loss_scale != 1.0:
             for group in self.optimizer.param_groups:
                 grads = [p.grad for p in group['params'] if p.grad is not None]
-                _overflow_buf = torch.cuda.IntTensor([0])
+                _overflow_buf = torch.IntTensor([0])
                 multi_tensor_applier(amp_C.multi_tensor_scale,
                                      _overflow_buf,
                                      [grads, grads],
@@ -384,7 +384,7 @@ class FP16_Optimizer(object):
 
         Example::
 
-            model = torch.nn.Linear(D_in, D_out).cuda().half()
+            model = torch.nn.Linear(D_in, D_out).float()
             optimizer = torch.optim.SGD(model.parameters(), lr=1e-3)
             optimizer = FP16_Optimizer(optimizer, static_loss_scale = 128.0)
             ...
@@ -544,7 +544,7 @@ class FP16_Optimizer(object):
             :attr:`inspect_master_grad_data()`.
 
         Args:
-            loss:  The loss output by the user's model.  loss may be either float or half (but see first Note above).
+            loss:  The loss output by the user's model.  loss may be either float or float (but see first Note above).
             update_master_grads (bool, optional, default=True):  Option to copy fp16 grads to fp32 grads on this call.  By setting this to False, the user can delay the copy, which is useful to eliminate redundant fp16->fp32 grad copies if :attr:`backward` is being called on multiple losses in one iteration.  If set to False, the user becomes responsible for calling :attr:`update_master_grads` before calling :attr:`step`.
             retain_graph (bool, optional, default=False):  Forwards the usual ``retain_graph=True`` option to the internal call to ``loss.backward``.  If ``retain_graph`` is being used to accumulate gradient values from multiple backward passes before calling ``optimizer.step``, passing ``update_master_grads=False`` is also recommended (see Example below).
 

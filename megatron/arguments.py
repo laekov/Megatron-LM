@@ -67,7 +67,7 @@ def parse_args(extra_args_provider=None, defaults={},
     # Parameters dtype.
     args.params_dtype = torch.float
     if args.fp16:
-        args.params_dtype = torch.half
+        args.params_dtype = torch.float
     if args.rank == 0:
         print('using {} for parameters ...'.format(args.params_dtype),
               flush=True)
@@ -362,8 +362,8 @@ def _add_distributed_args(parser):
 
     group.add_argument('--model-parallel-size', type=int, default=1,
                        help='Size of the model parallel.')
-    group.add_argument('--distributed-backend', default='nccl',
-                       choices=['nccl', 'gloo'],
+    group.add_argument('--distributed-backend', default='mpi',
+                       choices=['nccl', 'gloo', 'mpi'],
                        help='Which backend to use for distributed training.')
     group.add_argument('--DDP-impl', default='local',
                        choices=['local', 'torch'],

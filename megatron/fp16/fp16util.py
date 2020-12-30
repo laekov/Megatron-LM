@@ -18,8 +18,8 @@ import torch.nn as nn
 from torch.autograd import Variable
 from torch._utils import _flatten_dense_tensors, _unflatten_dense_tensors
 
-from apex.multi_tensor_apply import multi_tensor_applier
-import amp_C
+# from apex.multi_tensor_apply import multi_tensor_applier
+# import amp_C
 
 from megatron import mpu
 
@@ -29,19 +29,19 @@ class tofp16(nn.Module):
     Utility module that implements::
 
         def forward(self, input):
-            return input.half()
+            return input.float()
     """
 
     def __init__(self):
         super(tofp16, self).__init__()
 
     def forward(self, input):
-        return input.half()
+        return input.float()
 
 
 def BN_convert_float(module):
     """
-    Utility function for network_to_half().
+    Utility function for network_to_float().
 
     Retained for legacy purposes.
     """
@@ -52,13 +52,13 @@ def BN_convert_float(module):
     return module
 
 
-def network_to_half(network):
+def network_to_float(network):
     """
-    Convert model to half precision in a batchnorm-safe way.
+    Convert model to float precision in a batchnorm-safe way.
 
     Retained for legacy purposes. It is recommended to use FP16Model.
     """
-    return nn.Sequential(tofp16(), BN_convert_float(network.half()))
+    return nn.Sequential(tofp16(), BN_convert_float(network.float()))
 
 
 def convert_module(module, dtype):
@@ -90,15 +90,15 @@ def convert_network(network, dtype):
 
 class FP16Model(nn.Module):
     """
-    Convert model to half precision in a batchnorm-safe way.
+    Convert model to float precision in a batchnorm-safe way.
     """
 
     def __init__(self, network):
         super(FP16Model, self).__init__()
-        self.network = convert_network(network, dtype=torch.half)
+        self.network = convert_network(network, dtype=torch.float)
 
     def forward(self, *inputs):
-        inputs = tuple(t.half() for t in inputs)
+        inputs = tuple(t.float() for t in inputs)
         return self.network(*inputs)
 
 
@@ -173,7 +173,7 @@ def model_grads_to_master_grads(model_params, master_params, flat_master=False):
                 master.grad = None
         model_grads = [p.grad for p in model_params if p.grad is not None]
         master_grads = [p.grad for p in master_params if p.grad is not None]
-        _overflow_buf = torch.cuda.IntTensor([0])
+        _overflow_buf = torch.IntTensor([0])
         multi_tensor_applier(amp_C.multi_tensor_scale,
                              _overflow_buf,
                              [model_grads, master_grads],

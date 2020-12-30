@@ -27,7 +27,7 @@ class DistributedDataParallel(MegatronModule):
 
     def __init__(self, module):
         super(DistributedDataParallel, self).__init__()
-        self.warn_on_half = True if dist._backend == dist.dist_backend.GLOO else False
+        self.warn_on_float = True if dist._backend == dist.dist_backend.GLOO else False
 
         self.module = module
         self.data_parallel_group = mpu.get_data_parallel_group()
@@ -42,11 +42,11 @@ class DistributedDataParallel(MegatronModule):
                         if tp not in buckets:
                             buckets[tp] = []
                         buckets[tp].append(param)
-                if self.warn_on_half:
-                    if torch.cuda.HalfTensor in buckets:
-                        print("WARNING: gloo dist backend for half parameters may be extremely slow." +
+                if self.warn_on_float:
+                    if torch.HalfTensor in buckets:
+                        print("WARNING: gloo dist backend for float parameters may be extremely slow." +
                               " It is recommended to use the NCCL backend in this case.")
-                        self.warn_on_half = False
+                        self.warn_on_float = False
                 for tp in buckets:
                     bucket = buckets[tp]
                     grads = [param.grad.data for param in bucket]
@@ -56,7 +56,7 @@ class DistributedDataParallel(MegatronModule):
                     if not no_scale and not reduce_after:
                         coalesced /= dist.get_world_size(group=self.data_parallel_group)
                     dist.all_reduce(coalesced, group=self.data_parallel_group)
-                    torch.cuda.synchronize()
+                    # torch.synchronize()
                     if not no_scale and reduce_after:
                         coalesced /= dist.get_world_size(group=self.data_parallel_group)
                     for buf, synced in zip(grads, _unflatten_dense_tensors(coalesced, grads)):

@@ -56,10 +56,10 @@ def initialize_distributed(backend='nccl'):
           'rank: {}, world size: {}'.format(local_rank, rank, world_size))
 
     # Set the device id.
-    device = rank % torch.cuda.device_count()
+    device = rank % torch.device_count()
     if local_rank is not None:
         device = local_rank
-    torch.cuda.set_device(device)
+    torch.set_device(device)
 
     # Call the init process.
     init_method = 'tcp://'

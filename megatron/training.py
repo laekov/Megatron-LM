@@ -20,7 +20,10 @@ import math
 import sys
 import torch
 from torch.nn.parallel.distributed import DistributedDataParallel as torchDDP
-from apex.optimizers import FusedAdam as Adam
+try:
+    from apex.optimizers import FusedAdam as Adam
+except Exception as e:
+    from torch.optim import Adam
 
 from megatron import get_args
 from megatron import get_timers
@@ -128,7 +131,7 @@ def get_model(model_provider_func):
             sum([p.nelement() for p in model.parameters()])), flush=True)
 
     # GPU allocation.
-    model.cuda(torch.cuda.current_device())
+    # model.cuda(torch.current_device())
 
     # Fp16 conversion.
     if args.fp16:
@@ -136,7 +139,7 @@ def get_model(model_provider_func):
 
     # Wrap model for distributed training."""
     if args.DDP_impl == 'torch':
-        i = torch.cuda.current_device()
+        i = 0 # torch.current_device()
         model = torchDDP(model, device_ids=[i], output_device=i,
                          process_group=mpu.get_data_parallel_group())
         return model
@@ -238,7 +241,7 @@ def backward_step(optimizer, model, loss):
 
     # Backward pass.
     timers('backward-backward').start()
-    optimizer.zero_grad(set_grads_to_None=True)
+    optimizer.zero_grad()
     if args.fp16:
         optimizer.backward(loss, update_master_grads=False)
     else:
@@ -316,7 +319,7 @@ def training_log(loss_dict, total_loss_dict, learning_rate, iteration,
     for key in loss_dict:
         if not skipped_iter:
             total_loss_dict[key] = total_loss_dict.get(
-                key, torch.cuda.FloatTensor([0.0])) + loss_dict[key]
+                key, torch.FloatTensor([0.0])) + loss_dict[key]
         else:
             value = loss_dict[key].float().sum().item()
             is_nan = value == float('inf') or \
@@ -372,7 +375,7 @@ def training_log(loss_dict, total_loss_dict, learning_rate, iteration,
                 avg = total_loss_dict[key].item() / float(num_iterations)
                 if avg > 0.0:
                     log_string += ' {}: {:.6E} |'.format(key, avg)
-                total_loss_dict[key] = torch.cuda.FloatTensor([0.0])
+                total_loss_dict[key] = torch.FloatTensor([0.0])
         if args.fp16:
             log_string += ' loss scale: {:.1f} |'.format(loss_scale)
         log_string += ' number of skipped iterations: {:3d} |'.format(
@@ -549,10 +552,10 @@ def build_train_valid_test_data_iterators(
         do_valid = valid_dataloader is not None and args.eval_iters > 0
         do_test = test_dataloader is not None and args.eval_iters > 0
         # Need to broadcast num_tokens and num_type_tokens.
-        flags = torch.cuda.LongTensor(
+        flags = torch.LongTensor(
             [int(do_train), int(do_valid), int(do_test)])
     else:
-        flags = torch.cuda.LongTensor([0, 0, 0])
+        flags = torch.LongTensor([0, 0, 0])
 
     # Broadcast num tokens.
     torch.distributed.broadcast(flags,

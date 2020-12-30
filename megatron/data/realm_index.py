@@ -138,7 +138,7 @@ class FaissMIPSIndex(object):
             # create resources and config for GpuIndex
             res = faiss.StandardGpuResources()
             config = faiss.GpuIndexFlatConfig()
-            config.device = torch.cuda.current_device()
+            config.device = torch.current_device()
             config.useFloat16 = True
 
             self.block_mips_index = faiss.GpuIndexFlat(res, self.block_mips_index, config)

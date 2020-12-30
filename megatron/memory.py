@@ -58,7 +58,6 @@ class MemoryBuffer:
         self.dtype = dtype
         self.data = torch.empty(self.numel,
                                 dtype=self.dtype,
-                                device=torch.cuda.current_device(),
                                 requires_grad=False)
 
         # Index tracking the start of the free memory.

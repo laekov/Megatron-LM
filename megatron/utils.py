@@ -42,13 +42,10 @@ def report_memory(name):
     """Simple GPU memory report."""
     mega_bytes = 1024.0 * 1024.0
     string = name + ' memory (MB)'
-    string += ' | allocated: {}'.format(
-        torch.cuda.memory_allocated() / mega_bytes)
-    string += ' | max allocated: {}'.format(
-        torch.cuda.max_memory_allocated() / mega_bytes)
-    string += ' | reserved: {}'.format(torch.cuda.memory_reserved() / mega_bytes)
-    string += ' | max reserved: {}'.format(
-        torch.cuda.max_memory_reserved() / mega_bytes)
+    string += ' | allocated: {}'.format(0)
+    string += ' | max allocated: {}'.format(0)
+    string += ' | reserved: {}'.format(0)
+    string += ' | max reserved: {}'.format(0)
     print_rank_0(string)
 
 

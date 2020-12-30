@@ -35,7 +35,7 @@ def get_batch(context_tokens):
     tokenizer = get_tokenizer()
 
     # Move to GPU.
-    tokens = context_tokens.view(args.batch_size, -1).contiguous().cuda()
+    tokens = context_tokens.view(args.batch_size, -1).contiguous()
     # Get the attention mask and postition ids.
     attention_mask, _, position_ids = get_ltor_masks_and_position_ids(
         tokens,
@@ -122,14 +122,14 @@ def generate_samples_input_from_file(model):
 
                     if context_length >= (args.seq_length // 2):
                         print("\nContext length", context_length,
-                              "\nPlease give smaller context (half of the "
+                              "\nPlease give smaller context (float of the "
                               "sequence length)!", flush=True)
                         continue
             else:
                 context_tokens = tokenizer.tokenize("EMPTY TEXT")
                 context_length = len(context_tokens)
 
-            terminate_runs_tensor = torch.cuda.LongTensor([terminate_runs])
+            terminate_runs_tensor = torch.LongTensor([terminate_runs])
             torch.distributed.broadcast(terminate_runs_tensor,
                                         mpu.get_model_parallel_src_rank(),
                                         group=mpu.get_model_parallel_group())
@@ -189,14 +189,14 @@ def generate_samples_interactive(model, print_frequency=24):
 
                     if context_length >= (args.seq_length // 2):
                         print("\nContext length", context_length,
-                              "\nPlease give smaller context (half of the "
+                              "\nPlease give smaller context (float of the "
                               "sequence length)!", flush=True)
                         continue
             else:
                 context_tokens = tokenizer.tokenize("EMPTY TEXT")
                 context_length = len(context_tokens)
 
-            terminate_runs_tensor = torch.cuda.LongTensor([terminate_runs])
+            terminate_runs_tensor = torch.LongTensor([terminate_runs])
             torch.distributed.broadcast(terminate_runs_tensor,
                                         mpu.get_model_parallel_src_rank(),
                                         group=mpu.get_model_parallel_group())
@@ -295,8 +295,8 @@ def get_token_stream(model, context_tokens):
     context_tokens, context_lengths = pad_batch(context_tokens,
                                                 tokenizer.eod, args)
 
-    context_tokens_tensor = torch.cuda.LongTensor(context_tokens)
-    context_length_tensor = torch.cuda.LongTensor(context_lengths)
+    context_tokens_tensor = torch.LongTensor(context_tokens)
+    context_length_tensor = torch.LongTensor(context_lengths)
 
     torch.distributed.broadcast(context_length_tensor,
                                 mpu.get_model_parallel_src_rank(),
@@ -339,14 +339,14 @@ def sample_sequence_batch(model, context_tokens, context_lengths,
 
         layer_past = None
         batch_size = context_tokens.size(0)
-        is_done = torch.zeros([batch_size]).byte().cuda()
+        is_done = torch.zeros([batch_size]).byte()
         tokens = context_tokens
         if maxlen is None:
             maxlen = args.seq_length - 1
             if maxlen > (org_context_length + args.out_seq_length):
                 maxlen = org_context_length + args.out_seq_length
 
-        lengths = torch.ones([batch_size]).long().cuda() * maxlen
+        lengths = torch.ones([batch_size]).long() * maxlen
 
         while context_length <= (maxlen):
 

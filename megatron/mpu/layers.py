@@ -55,8 +55,8 @@ def _initialize_affine_weight_gpu(weight, init_method,
     weight.partition_dim = partition_dim
     weight.partition_stride = stride
     
-    with get_cuda_rng_tracker().fork():
-        init_method(weight)
+    # with get_cuda_rng_tracker().fork():
+    init_method(weight)
 
 
 def _initialize_affine_weight_cpu(weight, output_size, input_size,
@@ -140,7 +140,7 @@ class VocabParallelEmbedding(torch.nn.Module):
         else:
             self.weight = Parameter(torch.empty(
                 self.num_embeddings_per_partition, self.embedding_dim,
-                device=torch.cuda.current_device(), dtype=args.params_dtype))
+                dtype=args.params_dtype))
             _initialize_affine_weight_gpu(self.weight, init_method,
                                           partition_dim=0, stride=1)
 
@@ -222,7 +222,7 @@ class ColumnParallelLinear(torch.nn.Module):
         else:
             self.weight = Parameter(torch.empty(
                 self.output_size_per_partition, self.input_size,
-                device=torch.cuda.current_device(), dtype=args.params_dtype))
+                dtype=args.params_dtype))
             _initialize_affine_weight_gpu(self.weight, init_method,
                                           partition_dim=0, stride=stride)
             
@@ -233,7 +233,6 @@ class ColumnParallelLinear(torch.nn.Module):
             else:
                 self.bias = Parameter(torch.empty(
                     self.output_size_per_partition,
-                    device=torch.cuda.current_device(),
                     dtype=args.params_dtype))
             self.bias.model_parallel = True
             self.bias.partition_dim = 0
@@ -324,7 +323,7 @@ class RowParallelLinear(torch.nn.Module):
         else:
             self.weight = Parameter(torch.empty(
                 self.output_size, self.input_size_per_partition,
-                device=torch.cuda.current_device(), dtype=args.params_dtype))
+                dtype=args.params_dtype))
             _initialize_affine_weight_gpu(self.weight, init_method,
                                           partition_dim=1, stride=stride)
         if bias:
@@ -333,7 +332,7 @@ class RowParallelLinear(torch.nn.Module):
                                                   dtype=args.params_dtype))
             else:
                 self.bias = Parameter(torch.empty(
-                    self.output_size, device=torch.cuda.current_device(),
+                    self.output_size,
                     dtype=args.params_dtype))
             # Always initialize bias to zero.
             with torch.no_grad():

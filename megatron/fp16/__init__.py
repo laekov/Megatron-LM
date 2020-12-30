@@ -14,7 +14,7 @@
 # limitations under the License.
 from .fp16util import (
     BN_convert_float,
-    network_to_half,
+    network_to_float,
     prep_param_lists,
     model_grads_to_master_grads,
     master_params_to_model_params,

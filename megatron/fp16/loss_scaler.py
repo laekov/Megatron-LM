@@ -15,8 +15,8 @@
 
 import torch
 
-from apex.multi_tensor_apply import multi_tensor_applier
-import amp_C
+# from apex.multi_tensor_apply import multi_tensor_applier
+# import amp_C
 
 from megatron import mpu
 
@@ -61,7 +61,7 @@ class LossScaler:
         return self.cur_scale
 
     def scale_gradient(self, module, grad_in, grad_out):
-        _overflow_buf = torch.cuda.IntTensor([0])
+        _overflow_buf = torch.IntTensor([0])
         multi_tensor_applier(amp_C.multi_tensor_scale,
                              _overflow_buf,
                              [grad_in, grad_in],
@@ -128,7 +128,7 @@ class DynamicLossScaler:
         overflow = self.has_overflow_serial(params)
         # Since each model parallel GPU carries only part of the model,
         # make sure overflow flag is synced across all the model parallel GPUs
-        overflow_gpu = torch.cuda.ByteTensor([overflow])
+        overflow_gpu = torch.ByteTensor([overflow])
         torch.distributed.all_reduce(overflow_gpu,
                                      op=torch.distributed.ReduceOp.MAX,
                                      group=mpu.get_model_parallel_group())
@@ -139,7 +139,7 @@ class DynamicLossScaler:
 
     def _has_inf_or_nan(x):
         try:
-            # if x is half, the .float() incurs an additional deep copy, but it's necessary if
+            # if x is float, the .float() incurs an additional deep copy, but it's necessary if
             # Pytorch's .sum() creates a one-element tensor of the same type as x
             # (which is true for some recent version of pytorch).
             cpu_sum = float(x.float().sum())
@@ -189,7 +189,7 @@ class DynamicLossScaler:
         return self.cur_scale
 
     def scale_gradient(self, module, grad_in, grad_out):
-        _overflow_buf = torch.cuda.IntTensor([0])
+        _overflow_buf = torch.IntTensor([0])
         multi_tensor_applier(amp_C.multi_tensor_scale,
                              _overflow_buf,
                              [grad_in, grad_in],

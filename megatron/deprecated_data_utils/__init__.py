@@ -93,7 +93,7 @@ def make_dataset(path, seq_length, text_key, label_key, lazy=False, process_fn=N
             # This should be a barrier but nccl barrier assumes
             # device_index=rank which is not the case for model
             # parallel case
-            counts = torch.cuda.LongTensor([1])
+            counts = torch.LongTensor([1])
             torch.distributed.all_reduce(counts, group=parallel_group)
             assert counts[0].item() == torch.distributed.get_world_size(
                 group=parallel_group)
