@@ -1,14 +1,23 @@
 #!/bin/bash
 
-RANK=0
-WORLD_SIZE=1
+source /opt/spack/share/spack/setup-env.sh
+spack load python
+
+RANK=$OMPI_COMM_WORLD_RANK
+WORLD_SIZE=$OMPI_COMM_WORLD_SIZE
+
+if [ -z $RANK ]
+then
+	RANK=0
+	WORLD_SIZE=1
+fi
 DATA_PATH=$HOME/Megatron-LM/data/my-bert_text_sentence
 CHECKPOINT_PATH=$HOME/Megatron-LM/ckpt/bert-$(date +%y%m%d-%H%M%S)
 
 python pretrain_bert.py \
-       --num-layers 24 \
-       --hidden-size 256 \
-       --num-attention-heads 4 \
+       --num-layers 6 \
+       --hidden-size 128 \
+       --num-attention-heads 8 \
        --batch-size 1 \
        --seq-length 128 \
        --max-position-embeddings 512 \
